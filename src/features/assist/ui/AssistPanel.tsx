@@ -34,7 +34,9 @@ export function AssistPanel({
             {HINT_LIMIT - session.hints} / {HINT_LIMIT}
           </span>
         </button>
-        <p className="hint-note">每次只揭示一格，不替你完成整幅图。</p>
+        <p className="hint-note">
+          每次只揭示一格，不替你完成整幅图；支线与主盘共用额度。
+        </p>
         <button
           className="check-button"
           onClick={onCheck}

@@ -9,12 +9,14 @@ import { Clue } from "./Clue";
 export function BoardPanel({
   puzzle,
   session,
+  routeName,
   onMark,
   onUndo,
   onReset,
 }: {
   puzzle: Puzzle;
   session: Session;
+  routeName: string | null;
   onMark: (i: number, t: Tool) => void;
   onUndo: () => void;
   onReset: () => void;
@@ -22,16 +24,39 @@ export function BoardPanel({
   const [tool, setTool] = useState<Tool>("filled");
   const clues = clueSet(puzzle.size, puzzle.solution);
   const statuses = lineStatuses(puzzle, session.marks);
+  const lastMove = session.moves.at(-1);
+  const lastGroup = lastMove?.groupId
+    ? session.moves.filter((move) => move.groupId === lastMove.groupId).length
+    : 0;
+  const canUndo = routeName
+    ? session.moves.length > 0
+    : !session.solved
+      ? session.moves.length > 0
+      : lastGroup > 0;
+  const undoLabel = lastGroup
+    ? `撤销这次合并提交（共 ${lastGroup} 格）`
+    : routeName
+      ? "撤销支线里的上一步"
+      : session.solved
+        ? "已完成的盘面不能撤销单格标记"
+        : "撤销上一步";
   return (
-    <section className="board-panel panel">
+    <section className={`board-panel panel ${routeName ? "on-route" : ""}`}>
       <div className="board-heading">
         <div>
           <span className="eyebrow">
             A LITTLE DISCOVERY · {puzzle.collection}
           </span>
           <h1>
-            {session.solved ? puzzle.title : "一格一格，拼出惊喜"}
+            {routeName
+              ? session.solved
+                ? "这条支线已经走通"
+                : "在支线里尝试"
+              : session.solved
+                ? puzzle.title
+                : "一格一格，拼出惊喜"}
             <span className="level-tag">{puzzle.level}</span>
+            {routeName && <span className="route-tag">{routeName}</span>}
           </h1>
         </div>
         <div className="timer">
@@ -47,7 +72,8 @@ export function BoardPanel({
         onTool={setTool}
         onUndo={onUndo}
         onReset={onReset}
-        canUndo={session.moves.length > 0}
+        canUndo={canUndo}
+        undoLabel={undoLabel}
         disabled={session.solved}
       />
       <div className="board-stage">
@@ -114,7 +140,7 @@ export function BoardPanel({
           {session.solved ? (
             <>
               <CheckCircle2 size={15} />
-              图案已揭晓
+              {routeName ? "这条支线已经可以完整合并" : "图案已揭晓"}
             </>
           ) : (
             "每一小步，都离答案更近"

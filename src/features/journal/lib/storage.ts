@@ -1,5 +1,12 @@
 import type { GameDocument, Mark, Puzzle } from "../../../shared/types";
-import { newDocument, newSession, isSolved } from "../../../shared/document";
+import {
+  emptyHypothesisSpace,
+  newDocument,
+  newSession,
+  isSolved,
+} from "../../../shared/document";
+import { HINT_LIMIT } from "../../assist/model/hints";
+import { restoreHypothesis } from "../../hypothesis/lib/restore";
 const KEY = "gejian.document.v1";
 export function loadDocument(puzzles: Puzzle[]): {
   document: GameDocument;
@@ -25,7 +32,10 @@ export function loadDocument(puzzles: Puzzle[]): {
         const session = {
           ...newSession(puzzle),
           marks: saved.marks,
-          hints: Math.min(3, Math.max(0, Number(saved.hints) || 0)),
+          hints: Math.min(
+            HINT_LIMIT,
+            Math.max(0, Number(saved.hints) || 0),
+          ),
           checks: Math.max(0, Number(saved.checks) || 0),
           seconds: Math.max(0, Number(saved.seconds) || 0),
           updatedAt: Date.now(),
@@ -45,13 +55,35 @@ export function loadDocument(puzzles: Puzzle[]): {
         Number.isFinite(r.hints) &&
         Number.isFinite(r.checks),
     );
+    // A solved session may only stay frozen when a completion record backs it;
+    // otherwise the board is reopened instead of locking the user out.
+    for (const puzzle of puzzles) {
+      const session = sessions[puzzle.id];
+      if (
+        session?.solved &&
+        !records.some((record) => record.puzzleId === puzzle.id)
+      )
+        sessions[puzzle.id] = { ...session, solved: false };
+    }
+    const restored = restoreHypothesis(data.hypothesis, puzzles);
     return {
-      document: { version: 1, activeId: active.id, sessions, records },
-      warning: "",
+      document: {
+        version: 1,
+        activeId: active.id,
+        sessions,
+        records,
+        hypothesis: restored.space,
+      },
+      warning: restored.issue
+        ? `${restored.issue} 主盘内容未受影响，可手动保存当前进度。`
+        : "",
     };
   } catch {
     return {
-      document: newDocument(puzzles[0]),
+      document: {
+        ...newDocument(puzzles[0]),
+        hypothesis: emptyHypothesisSpace(),
+      },
       warning:
         "存档无法读取，已打开新的解题页。原存档未覆盖，请手动保存新进度。",
     };

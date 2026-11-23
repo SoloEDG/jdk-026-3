@@ -7,6 +7,7 @@ export function BoardToolbar({
   onReset,
   canUndo,
   disabled,
+  undoLabel,
 }: {
   tool: Tool;
   onTool: (t: Tool) => void;
@@ -14,6 +15,7 @@ export function BoardToolbar({
   onReset: () => void;
   canUndo: boolean;
   disabled: boolean;
+  undoLabel: string;
 }) {
   return (
     <div className="board-toolbar">
@@ -39,14 +41,18 @@ export function BoardToolbar({
       </div>
       <div className="tool-group">
         <button
-          aria-label="撤销上一步"
-          title="撤销上一步"
+          aria-label={undoLabel}
+          title={undoLabel}
           onClick={onUndo}
-          disabled={!canUndo || disabled}
+          disabled={!canUndo}
         >
           <Undo2 size={17} />
         </button>
-        <button aria-label="重新开始" title="重新开始" onClick={onReset}>
+        <button
+          aria-label="重新开始"
+          title="重新开始"
+          onClick={onReset}
+        >
           <RotateCcw size={17} />
         </button>
       </div>

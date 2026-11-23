@@ -1,4 +1,13 @@
-import type { GameDocument, Puzzle, Session } from "./types";
+import type {
+  GameDocument,
+  HypothesisSpace,
+  Mark,
+  Puzzle,
+  Session,
+} from "./types";
+export function emptyHypothesisSpace(): HypothesisSpace {
+  return { branches: {}, origins: {}, activeBranchId: null };
+}
 export function newSession(puzzle: Puzzle): Session {
   return {
     puzzleId: puzzle.id,
@@ -17,6 +26,7 @@ export function newDocument(puzzle: Puzzle): GameDocument {
     activeId: puzzle.id,
     sessions: { [puzzle.id]: newSession(puzzle) },
     records: [],
+    hypothesis: emptyHypothesisSpace(),
   };
 }
 export function completion(session: Session): number {
@@ -29,5 +39,27 @@ export function completion(session: Session): number {
 export function isSolved(puzzle: Puzzle, session: Session): boolean {
   return session.marks.every((mark, i) =>
     puzzle.solution[i] ? mark === "filled" : mark !== "filled",
+  );
+}
+/**
+ * A compact, stable representation of a board. Branch origins keep their own
+ * fingerprint so a route can prove it still shares a common starting point.
+ */
+export function fingerprint(marks: readonly Mark[]): string {
+  return marks
+    .map((mark) => (mark === "filled" ? "1" : mark === "cross" ? "x" : "."))
+    .join("");
+}
+export function isMark(value: unknown): value is Mark {
+  return value === "filled" || value === "cross" || value === "unknown";
+}
+export function isMarkArray(
+  value: unknown,
+  expectedLength: number,
+): value is Mark[] {
+  return (
+    Array.isArray(value) &&
+    value.length === expectedLength &&
+    value.every(isMark)
   );
 }

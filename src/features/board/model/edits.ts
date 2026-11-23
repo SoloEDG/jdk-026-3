@@ -21,15 +21,33 @@ export function applyMark(
     updatedAt: Date.now(),
   };
 }
-export function undoMark(session: Session): Session {
+/** Undo the newest step; steps of one merge commit are reverted together. */
+export function undoMark(
+  session: Session,
+  options: { force?: boolean } = {},
+): Session {
   const move = session.moves.at(-1);
-  if (!move || session.solved) return session;
+  if (!move) return session;
+  // A solved board is frozen, with one exception: the commit that solved it
+  // can be rolled back as a whole.
+  if (session.solved && !(options.force && move.groupId)) return session;
+  let undone = 1;
+  if (move.groupId) {
+    while (
+      undone < session.moves.length &&
+      session.moves.at(-1 - undone)?.groupId === move.groupId
+    )
+      undone++;
+  }
+  const group = session.moves.slice(-undone);
   const marks = [...session.marks];
-  marks[move.index] = move.before;
+  for (let i = group.length - 1; i >= 0; i--)
+    marks[group[i].index] = group[i].before;
   return {
     ...session,
     marks,
-    moves: session.moves.slice(0, -1),
+    solved: false,
+    moves: session.moves.slice(0, -undone),
     updatedAt: Date.now(),
   };
 }
